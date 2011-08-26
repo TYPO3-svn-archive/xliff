@@ -1,6 +1,6 @@
 2011-08-26  Xavier Perseguers  <xavier@typo3.org>
 
-	* [TASK][DOC] Add documentation skeleton
+	* [TASK][DOC] Add documentation
 	* [TASK] Raise version to 1.0.0 (stable)
 	* [TASK] Add business logic to remember conversion was performed for a given extension
 	* [TASK] Import code from http://forge.typo3.org/projects/extension-egovapi/repository/revisions/51393/entry/trunk/class.ext_update.php
