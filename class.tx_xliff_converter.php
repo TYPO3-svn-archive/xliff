@@ -77,7 +77,40 @@ class tx_xliff_converter extends t3lib_SCbase {
 	 * @return string
 	 */
 	public function generateLlXml() {
-		return '';
+		$this->content = '<input type="hidden" name="xliff" value="1" />';
+
+		$this->doc = t3lib_div::makeInstance('noDoc');
+		$this->doc->backPath = $GLOBALS['BACK_PATH'];
+
+		$title = 'Localization Files Converter';
+		$this->content .= $this->doc->header($title);
+		$this->content .= $this->doc->spacer(5);
+
+		$this->content .= $this->doc->section('',
+			'Extension ' . $this->extensionKey . ' is using XLIFF as localization format which is only supported'
+			. ' since TYPO3 4.6.<br />'
+			. 'This form lets you generate localization files compatible with the TYPO3 version you are'
+			. ' using: TYPO3 ' . TYPO3_version . '.<br />'
+			. 'Please note that you only should start the conversion process when installing or upgrading'
+			. ' this extension.'
+		);
+
+		if (t3lib_div::_GP('xliff')) {
+			$messages = $this->convertFiles();
+			$this->content .= $this->doc->section('Generated files', implode('<br />', $messages));
+		} else {
+			$files = $this->getXliffFiles();
+			$languages = $this->getLanguages($files);
+			$languages[0] = 'default (English)';
+
+			$this->content .= $this->doc->section('XLIFF files', implode('<br />', $files));
+			$this->content .= $this->doc->section('Languages', implode('<br />', $languages));
+		}
+
+			// Add some space before "Make updates" button
+		$this->content .= $this->doc->spacer(5);
+
+		return $this->content;
 	}
 
 	/**
@@ -92,6 +125,202 @@ class tx_xliff_converter extends t3lib_SCbase {
 		);
 
 		return $files;
+	}
+
+	/**
+	 * Extracts the languages from a list of localization files.
+	 *
+	 * @param array $files
+	 * @return array
+	 */
+	protected function getLanguages(array $files) {
+		$languages = array('default');
+		foreach ($files as $file) {
+			if (preg_match('/^([^.]+)\.locallang.*\.xlf$/', basename($file), $matches)) {
+				if (!in_array($matches[1], $languages)) {
+					$languages[] = $matches[1];
+				}
+			}
+		}
+
+		return $languages;
+	}
+
+	/**
+	 * Generates ll-XML localization files from XLIFF files of this extension.
+	 * ll-XML localization files for default language will be stored next to the
+	 * XLIFF files. Other languages will be stored within typo3conf/l10n/, as for
+	 * localization files retrieved from TER.
+	 *
+	 * @return array
+	 */
+	protected function convertFiles() {
+		$files = $this->getXliffFiles();
+
+			// Group files by language
+		$sourceFiles = array_flip($this->getLanguages($files));
+		foreach ($sourceFiles as $languageKey => $foo) {
+			if (!is_array($foo)) {
+				$sourceFiles[$languageKey] = array();
+			}
+			foreach ($files as $file) {
+				if ($languageKey === 'default') {
+					if (t3lib_div::isFirstPartOfStr(basename($file), 'locallang')) {
+						$sourceFiles[$languageKey][] = $file;
+					}
+				} else {
+					if (t3lib_div::isFirstPartOfStr(basename($file), $languageKey . '.locallang')) {
+						$sourceFiles[$languageKey][] = $file;
+					}
+				}
+			}
+		}
+
+			// Convert localization files
+		$messages = array();
+		$extDirectoryPrefix = substr(t3lib_extMgm::extPath($this->extensionKey), strlen(PATH_site));
+		foreach ($sourceFiles as $languageKey => $files) {
+			$l10nDirectory = 'typo3conf/l10n/' . $languageKey . '/' . $this->extensionKey . '/';
+			foreach ($files as $file) {
+				if ($languageKey === 'default') {
+					$targetFile = substr($file, 0, strlen($file) - 4) . '.xml';
+				} else {
+					$llxmlFile = basename(substr($file, 0, strlen($file) - 4) . '.xml');
+					$targetFile = $l10nDirectory . dirname(substr($file, strlen($extDirectoryPrefix))) . '/' . $llxmlFile;
+				}
+
+				if ($this->xliff2llxml($languageKey, PATH_site . $file, PATH_site . $targetFile)) {
+					$messages[] = 'Created file ' . $targetFile;
+				} else {
+					$messages[] = 'ERROR creating file ' . $targetFile;
+				}
+			}
+		}
+
+			// Return the success/error messages for generated files
+		return $messages;
+	}
+
+	/**
+	 * Converts XLIFF localization file to ll-XML.
+	 *
+	 * @param string $languageKey
+	 * @param string $xliffFile
+	 * @param string $llxmlFile
+	 * @return boolean
+	 */
+	protected function xliff2llxml($languageKey, $xliffFile, $llxmlFile) {
+		try {
+			$LOCAL_LANG = $this->parseXliff($xliffFile, $languageKey);
+		} catch (Exception $e) {
+			return FALSE;
+		}
+
+		switch (TRUE) {
+			case substr($xliffFile, -7) === '_db.xlf':
+				$type = 'database';
+				$description = sprintf('Language labels for database tables/fields belonging to extension \'%s\'', $this->extensionKey);
+				break;
+			case substr($xliffFile, -8) === '_mod.xlf':
+				$type = 'module';
+				$description = sprintf('Language labels for module fields belonging to extension \'%s\'', $this->extensionKey);
+				break;
+			case substr($xliffFile, -8) === '_csh.xlf':
+				$type = 'CSH';
+				$description = sprintf('Context Sensitive Help language labels for plugin belonging to extension \'%s\'', $this->extensionKey);
+				break;
+			default:
+				$type = 'module';
+				$description = sprintf('Language labels for plugin belonging to extension \'%s\'', $this->extensionKey);
+				break;
+		}
+
+		$xml = array();
+		$xml[] = '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>';
+		$xml[] = '<T3locallang>';
+		$xml[] = '	<meta type="array">';
+		$xml[] = '		<type>' . $type . '</type>';
+		$xml[] = '		<description>' . $description . '</description>';
+		$xml[] = '	</meta>';
+		$xml[] = '	<data type="array">';
+		$xml[] = '		<languageKey index="' . $languageKey . '" type="array">';
+
+		foreach ($LOCAL_LANG[$languageKey] as $key => $data) {
+			$xml[] = '			<label index="' . $key . '">' . htmlspecialchars($data[0]['target']) . '</label>';
+		}
+
+		$xml[] = '		</languageKey>';
+		$xml[] = '	</data>';
+		$xml[] = '</T3locallang>';
+
+		try {
+			$ret = t3lib_div::mkdir_deep(PATH_site, substr(dirname($llxmlFile), strlen(PATH_site)) . '/');
+			$OK = !$ret;
+		} catch (RuntimeException $e) {
+			$OK = FALSE;
+		}
+
+		if ($OK) {
+			$OK = t3lib_div::writeFile($llxmlFile, implode(chr(10), $xml));
+		}
+
+		return $OK;
+	}
+
+	/**
+	 * Parses an XLIFF file into a LOCAL_LANG array structure.
+	 *
+	 * @param string $file
+	 * @param string $languageKey
+	 * @return array
+	 * @throws Exception
+	 */
+	protected function parseXliff($file, $languageKey) {
+		$root = simplexml_load_file($file, 'SimpleXmlElement', \LIBXML_NOWARNING);
+		$parsedData = array();
+		$bodyOfFileTag = $root->file->body;
+
+		foreach ($bodyOfFileTag->children() as $translationElement) {
+			if ($translationElement->getName() === 'trans-unit' && !isset($translationElement['restype'])) {
+					// If restype would be set, it could be metadata from Gettext to XLIFF conversion (and we don't need this data)
+
+				$parsedData[(string)$translationElement['id']][0] = array(
+					'source' => (string)$translationElement->source,
+					'target' => (string)$translationElement->target,
+				);
+			} elseif ($translationElement->getName() === 'group' && isset($translationElement['restype']) && (string)$translationElement['restype'] === 'x-gettext-plurals') {
+					// This is a translation with plural forms
+				$parsedTranslationElement = array();
+
+				foreach ($translationElement->children() as $translationPluralForm) {
+					if ($translationPluralForm->getName() === 'trans-unit') {
+							// When using plural forms, ID looks like this: 1[0], 1[1] etc
+						$formIndex = substr((string)$translationPluralForm['id'], strpos((string)$translationPluralForm['id'], '[') + 1, -1);
+
+						$parsedTranslationElement[(int)$formIndex] = array(
+							'source' => (string)$translationPluralForm->source,
+							'target' => (string)$translationPluralForm->target,
+						);
+					}
+				}
+
+				if (!empty($parsedTranslationElement)) {
+					if (isset($translationElement['id'])) {
+						$id = (string)$translationElement['id'];
+					} else {
+						$id = (string)($translationElement->{'trans-unit'}[0]['id']);
+						$id = substr($id, 0, strpos($id, '['));
+					}
+
+					$parsedData[$id] = $parsedTranslationElement;
+				}
+			}
+		}
+
+		$LOCAL_LANG = array();
+		$LOCAL_LANG[$languageKey] = $parsedData;
+
+		return $LOCAL_LANG;
 	}
 
 }
