@@ -46,7 +46,7 @@ class ux_tx_em_Install extends tx_em_Install {
 	 * @return array|string If $infoOnly, returns array with information. Otherwise performs update.
 	 */
 	public function checkDBupdates($extKey, array $extInfo, $infoOnly = FALSE) {
-		if ($infoOnly || $extKey === 'xliff') {
+		if ($infoOnly || $extKey === 'xliff' || $extInfo['type'] === 'S') {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 

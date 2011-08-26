@@ -46,7 +46,7 @@ class ux_SC_mod_tools_em_index extends SC_mod_tools_em_index {
 	 * @return array|string If $infoOnly, returns array with information. Otherwise performs update.
 	 */
 	public function checkDBupdates($extKey, array $extInfo, $infoOnly = FALSE) {
-		if ($infoOnly || $extKey === 'xliff') {
+		if ($infoOnly || $extKey === 'xliff' || $extInfo['type'] === 'S') {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 
