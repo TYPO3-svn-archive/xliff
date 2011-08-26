@@ -50,12 +50,13 @@ class ux_SC_mod_tools_em_index extends SC_mod_tools_em_index {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 
-		require_once(t3lib_extMgm::extPath('xliff', 'class.tx_xliff_converter.php'));
 		/** @var $converter tx_xliff_converter */
-		$converter = t3lib_div::makeInstance('tx_xliff_converter');
-		$output = $converter->main();
-
-		return $output ? $output : parent::checkDBupdates($extKey, $extInfo, $infoOnly);
+		$converter = t3lib_div::makeInstance('tx_xliff_converter', $extKey);
+		if ($converter->isConversionNeeded()) {
+			return $converter->generateLlXml();
+		} else {
+			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
+		}
 	}
 
 }

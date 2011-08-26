@@ -34,7 +34,41 @@
  * @license     http://www.gnu.org/copyleft/gpl.html
  * @version     SVN: $Id$
  */
-class tx_xliff_converter {
+class tx_xliff_converter extends t3lib_SCbase {
+
+	/**
+	 * @var integer
+	 */
+	protected $version;
+
+	/**
+	 * @var string
+	 */
+	protected $extensionKey;
+
+	/**
+	 * Default constructor.
+	 *
+	 * @param string $extensionKey
+	 */
+	public function __construct($extensionKey) {
+		$this->version = class_exists('t3lib_utility_VersionNumber')
+				? t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version)
+				: t3lib_div::int_from_ver(TYPO3_version);
+
+		$this->extensionKey = $extensionKey;
+	}
+
+	/**
+	 * Checks if conversion is needed.
+	 *
+	 * @return boolean
+	 */
+	public function isConversionNeeded() {
+		// TODO: add further business logic (last ll-XML generation, ...)
+		$files = $this->getXliffFiles();
+		return count($files) > 0;
+	}
 
 	/**
 	 * Outputs a HTML form to dynamically generate locallang*.xml files if needed
@@ -42,8 +76,22 @@ class tx_xliff_converter {
 	 *
 	 * @return string
 	 */
-	public function main() {
+	public function generateLlXml() {
 		return '';
+	}
+
+	/**
+	 * Returns an array of XLIFF files for this extension.
+	 *
+	 * @return array
+	 */
+	protected function getXliffFiles() {
+		$files = t3lib_div::removePrefixPathFromList(
+			t3lib_div::getAllFilesAndFoldersInPath(array(), t3lib_extMgm::extPath($this->extensionKey), 'xlf'),
+			PATH_site
+		);
+
+		return $files;
 	}
 
 }
