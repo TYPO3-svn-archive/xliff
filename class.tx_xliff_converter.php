@@ -47,16 +47,34 @@ class tx_xliff_converter extends t3lib_SCbase {
 	protected $extensionKey;
 
 	/**
+	 * @var string
+	 */
+	protected $extensionVersion;
+
+	/**
+	 * @var array
+	 */
+	protected $config;
+
+	/**
 	 * Default constructor.
 	 *
 	 * @param string $extensionKey
+	 * @param string $extensionVersion
 	 */
-	public function __construct($extensionKey) {
+	public function __construct($extensionKey, $extensionVersion) {
 		$this->version = class_exists('t3lib_utility_VersionNumber')
 				? t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version)
 				: t3lib_div::int_from_ver(TYPO3_version);
 
 		$this->extensionKey = $extensionKey;
+		$this->extensionVersion = $extensionVersion;
+
+		if (file_exists(PATH_site . 'typo3conf/xliff_conf.php')) {
+			$this->config = require_once(PATH_site . 'typo3conf/xliff_conf.php');
+		} else {
+			$this->config = array();
+		}
 	}
 
 	/**
@@ -65,7 +83,13 @@ class tx_xliff_converter extends t3lib_SCbase {
 	 * @return boolean
 	 */
 	public function isConversionNeeded() {
-		// TODO: add further business logic (last ll-XML generation, ...)
+		if (isset($this->config[$this->extensionKey])) {
+			if ($this->config[$this->extensionKey] === $this->extensionVersion) {
+					// Conversion already done for this version
+				return FALSE;
+			}
+		}
+
 		$files = $this->getXliffFiles();
 		return count($files) > 0;
 	}
@@ -77,7 +101,13 @@ class tx_xliff_converter extends t3lib_SCbase {
 	 * @return string
 	 */
 	public function generateLlXml() {
-		$this->content = '<input type="hidden" name="xliff" value="1" />';
+		$this->content = '';
+
+		$GP = t3lib_div::_GP('xliff');
+		if ($GP && $GP['done']) {
+			$this->persist();
+			return $this->content;
+		}
 
 		$this->doc = t3lib_div::makeInstance('noDoc');
 		$this->doc->backPath = $GLOBALS['BACK_PATH'];
@@ -95,9 +125,10 @@ class tx_xliff_converter extends t3lib_SCbase {
 			. ' this extension.'
 		);
 
-		if (t3lib_div::_GP('xliff')) {
+		if ($GP) {
 			$messages = $this->convertFiles();
 			$this->content .= $this->doc->section('Generated files', implode('<br />', $messages));
+			$this->content .= '<input type="hidden" name="xliff[done]" value="1" />';
 		} else {
 			$files = $this->getXliffFiles();
 			$languages = $this->getLanguages($files);
@@ -105,12 +136,29 @@ class tx_xliff_converter extends t3lib_SCbase {
 
 			$this->content .= $this->doc->section('XLIFF files', implode('<br />', $files));
 			$this->content .= $this->doc->section('Languages', implode('<br />', $languages));
+			$this->content .= '<input type="hidden" name="xliff[convert]" value="1" />';
 		}
 
 			// Add some space before "Make updates" button
 		$this->content .= $this->doc->spacer(5);
 
 		return $this->content;
+	}
+
+	/**
+	 * Saves the fact that current extension is ready.
+	 *
+	 * @return void
+	 */
+	protected function persist() {
+		$this->config[$this->extensionKey] = $this->extensionVersion;
+
+		$output = array();
+		$output[] = '<?php';
+		$output[] = 'return ' . var_export($this->config, TRUE) . ';';
+		$output[] = '?>';
+
+		t3lib_div::writeFile(PATH_site . 'typo3conf/xliff_conf.php', implode(chr(10), $output));
 	}
 
 	/**

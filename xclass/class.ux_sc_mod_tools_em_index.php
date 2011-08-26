@@ -46,17 +46,18 @@ class ux_SC_mod_tools_em_index extends SC_mod_tools_em_index {
 	 * @return array|string If $infoOnly, returns array with information. Otherwise performs update.
 	 */
 	public function checkDBupdates($extKey, array $extInfo, $infoOnly = FALSE) {
+		$output = '';
 		if ($infoOnly || $extKey === 'xliff' || $extInfo['type'] === 'S') {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 
 		/** @var $converter tx_xliff_converter */
-		$converter = t3lib_div::makeInstance('tx_xliff_converter', $extKey);
+		$converter = t3lib_div::makeInstance('tx_xliff_converter', $extKey, $extInfo['EM_CONF']['version']);
 		if ($converter->isConversionNeeded()) {
-			return $converter->generateLlXml();
-		} else {
-			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
+			$output = $converter->generateLlXml();
 		}
+
+		return $output ? $output : parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 	}
 
 }
