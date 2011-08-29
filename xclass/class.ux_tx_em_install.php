@@ -47,7 +47,7 @@ class ux_tx_em_Install extends tx_em_Install {
 	 */
 	public function checkDBupdates($extKey, array $extInfo, $infoOnly = FALSE) {
 		$output = '';
-		if ($infoOnly || $extKey === 'xliff' || $extInfo['type'] === 'S') {
+		if ($infoOnly || !isset($extInfo['EM_CONF']['constraints']['depends']['xliff'])) {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 

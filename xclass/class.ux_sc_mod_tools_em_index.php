@@ -47,7 +47,7 @@ class ux_SC_mod_tools_em_index extends SC_mod_tools_em_index {
 	 */
 	public function checkDBupdates($extKey, array $extInfo, $infoOnly = FALSE) {
 		$output = '';
-		if ($infoOnly || $extKey === 'xliff' || $extInfo['type'] === 'S') {
+		if ($infoOnly || !isset($extInfo['EM_CONF']['constraints']['depends']['xliff'])) {
 			return parent::checkDBupdates($extKey, $extInfo, $infoOnly);
 		}
 

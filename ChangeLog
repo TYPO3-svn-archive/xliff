@@ -1,3 +1,7 @@
+2011-08-29  Xavier Perseguers  <xavier@typo3.org>
+
+	* [TASK] Use extension dependency to show/skip conversion wizard
+
 2011-08-26  Xavier Perseguers  <xavier@typo3.org>
 
 	* [TASK][DOC] Add documentation
