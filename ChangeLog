@@ -1,3 +1,7 @@
+2011-08-30  Xavier Perseguers  <xavier@typo3.org>
+
+	* [TASK] Add upper bound for TYPO3 version requirement
+
 2011-08-29  Xavier Perseguers  <xavier@typo3.org>
 
 	* [TASK] Use extension dependency to show/skip conversion wizard
