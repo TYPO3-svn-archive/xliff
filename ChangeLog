@@ -1,3 +1,7 @@
+2011-11-08  Xavier Perseguers  <xavier@typo3.org>
+
+	* [BUGFIX] #30875: XLIFF to XML conversion fails on install
+
 2011-08-30  Xavier Perseguers  <xavier@typo3.org>
 
 	* [TASK] Add upper bound for TYPO3 version requirement
