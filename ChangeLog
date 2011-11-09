@@ -1,5 +1,6 @@
 2011-11-09  Xavier Perseguers  <xavier@typo3.org>
 
+	* [TASK] Raise version to 1.0.1
 	* [BUGFIX] #31703: Default (English) labels are missing
 
 2011-11-08  Xavier Perseguers  <xavier@typo3.org>
