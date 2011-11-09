@@ -332,10 +332,18 @@ class tx_xliff_converter extends t3lib_SCbase {
 			if ($translationElement->getName() === 'trans-unit' && !isset($translationElement['restype'])) {
 					// If restype would be set, it could be metadata from Gettext to XLIFF conversion (and we don't need this data)
 
-				$parsedData[(string)$translationElement['id']][0] = array(
-					'source' => (string)$translationElement->source,
-					'target' => (string)$translationElement->target,
-				);
+				if ($languageKey === 'default') {
+						// Default language coming from an XLIFF template (no target element)
+					$parsedData[(string)$translationElement['id']][0] = array(
+						'source' => (string)$translationElement->source,
+						'target' => (string)$translationElement->source,
+					);
+				} else {
+					$parsedData[(string)$translationElement['id']][0] = array(
+						'source' => (string)$translationElement->source,
+						'target' => (string)$translationElement->target,
+					);
+				}
 			} elseif ($translationElement->getName() === 'group' && isset($translationElement['restype']) && (string)$translationElement['restype'] === 'x-gettext-plurals') {
 					// This is a translation with plural forms
 				$parsedTranslationElement = array();
@@ -345,10 +353,18 @@ class tx_xliff_converter extends t3lib_SCbase {
 							// When using plural forms, ID looks like this: 1[0], 1[1] etc
 						$formIndex = substr((string)$translationPluralForm['id'], strpos((string)$translationPluralForm['id'], '[') + 1, -1);
 
-						$parsedTranslationElement[(int)$formIndex] = array(
-							'source' => (string)$translationPluralForm->source,
-							'target' => (string)$translationPluralForm->target,
-						);
+						if ($languageKey === 'default') {
+								// Default language come from XLIFF template (no target element)
+							$parsedTranslationElement[(int)$formIndex] = array(
+								'source' => (string)$translationPluralForm->source,
+								'target' => (string)$translationPluralForm->source,
+							);
+						} else {
+							$parsedTranslationElement[(int)$formIndex] = array(
+								'source' => (string)$translationPluralForm->source,
+								'target' => (string)$translationPluralForm->target,
+							);
+						}
 					}
 				}
 
